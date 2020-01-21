@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import MessageUI
 
 enum MeTableViewHeaderID : Int8{
     case Undefine = 0
@@ -18,7 +19,7 @@ enum MeTableViewHeaderID : Int8{
     case About = 6
 }
 
-class MeTableViewController: UITableViewController {
+class MeTableViewController: UITableViewController,MFMailComposeViewControllerDelegate{
     
     private final let items : Array<Array<MeListItem>> = [
         [
@@ -99,11 +100,17 @@ class MeTableViewController: UITableViewController {
                 break
             case MeTableViewHeaderID.Website:
                 UIApplication.shared.open(URL.init(string: "http://bing.creepersan.com")!)
-                
-//                let webSiteController = WebSiteViewController.init()
-//                self.navigationController?.pushViewController(webSiteController, animated: true)
                 break
             case MeTableViewHeaderID.Feedback:
+                //0.首先判断设备是否能发送邮件
+                if MFMailComposeViewController.canSendMail() {
+                    //1.配置邮件窗口
+                    let mailView = configuredMailComposeViewController()
+                    //2. 显示邮件窗口
+                    present(mailView, animated: true, completion: nil)
+                } else {
+                    showSendMailErrorAlert()
+                }
                 break
             case MeTableViewHeaderID.Help:
                 let helpController = HelpViewController.init()
@@ -120,5 +127,41 @@ class MeTableViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
 
+    func configuredMailComposeViewController() -> MFMailComposeViewController {
 
+        let mailComposeVC = MFMailComposeViewController()
+        mailComposeVC.mailComposeDelegate = self
+
+        //设置邮件地址、主题及正文
+        mailComposeVC.setToRecipients(["admin@creepersan.com"])
+        mailComposeVC.setSubject("iOS BingImage 反馈:请在这里输入问题")
+        mailComposeVC.setMessageBody("问题描述:<br><br><br> 操作步骤:<br><br><br> 问题引起后果:<br>", isHTML: true)
+
+        return mailComposeVC
+    }
+    
+    func showSendMailErrorAlert() {
+
+        let sendMailErrorAlert = UIAlertController(title: "未开启邮件功能", message: "设备邮件功能尚未开启，请在设置中更改", preferredStyle: .alert)
+        sendMailErrorAlert.addAction(UIAlertAction(title: "确定", style: .default) { _ in })
+        self.present(sendMailErrorAlert, animated: true){}
+    }
+
+    func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+        switch result.rawValue{
+        case MFMailComposeResult.sent.rawValue:
+            print("邮件已发送")
+        case MFMailComposeResult.cancelled.rawValue:
+            print("邮件已取消")
+        case MFMailComposeResult.saved.rawValue:
+            print("邮件已保存")
+        case MFMailComposeResult.failed.rawValue:
+            print("邮件发送失败")
+        default:
+            print("邮件没有发送")
+            break
+        }
+
+        controller.dismiss(animated: true, completion: nil)
+    }
 }
